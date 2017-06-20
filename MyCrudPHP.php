@@ -64,7 +64,7 @@ class MyCrudPHP {
 		$this->values = $temp;
 	}
 
-	public function save() {
+	public function saveRecord() {
 		if ( ($this->execution_state == 'UPDATE') && (count($this->values) > 0) && (count($this->filter) > 0) ) {
 			
 			// Filter
@@ -140,8 +140,8 @@ class MyCrudPHP {
 		}
 	}
 	
-	public function saveRecord() {
-		return $this->save();
+	public function save() {
+		return $this->saveRecord();
 	}
 	
 	private function addExecutionLog($data) {
@@ -200,14 +200,14 @@ class MyCrudPHP {
 		$this->addExecutionLog(array(trim($sql), $this->filter));
 		
 		$q = $this->conn->prepare($sql);
-		$bound = array_merge($this->filter);
+		$bound = $this->filter;
 		
 		if ($q->execute($bound)) {
 			return true;
 		} else {
 			return false;
 		}
-		
+
 	}
 
 }
@@ -224,12 +224,12 @@ print_r($person->getLoadedRecord());
 // Update:
 $person = $crud->table('persons')->getRecord(array('id' => 1));
 $person->setValues(array('name' => 'Lawrence', 'age' => 27));
-$person->save();
+$person->saveRecord();
 
 // Insert:
 $person = $crud->table('persons')->newRecord();
 $person->setValues(array('name' => 'Lawrence', 'age' => 27));
-$person->save();
+$person->saveRecord();
 
 // Delete:
 $person = $crud->table('persons')->getRecord(array('id' => 1));

@@ -27,14 +27,14 @@ print_r($person->getLoadedRecord());
 ```
 $person = $crud->table('persons')->getRecord(array('id' => 1));
 $person->setValues(array('name' => 'Lawrence', 'age' => 27));
-$person->save();
+$person->saveRecord();
 ```
 
 ### Insert a record
 ```
 $person = $crud->table('persons')->newRecord();
 $person->setValues(array('name' => 'Lawrence', 'age' => 27));
-$person->save();
+$person->saveRecord();
 ```
 
 ### Delete a record
