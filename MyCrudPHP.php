@@ -26,19 +26,24 @@ class MyCrudPHP {
 		$ps = $this->conn->prepare($sql);
 		$this->addExecutionLog(array(trim($sql)));
 		$ps->execute();
-		$rs = $ps->fetchAll();
+		$rs = $ps->fetchAll(PDO::FETCH_ASSOC);
 		return $rs;
 	}
 
 	public function table($table_name) {
 		$this->table_name = $table_name;
+		$this->table_structure = $this->getTableStructure($table_name);
+		//print_r($this->table_structure);
 		return $this;
 	}
 	
 	public function getRecord($filter) {
-		$this->execution_state = 'UPDATE';
-		$this->filter = $filter;
-		
+		$newCrud = new self($this->conn);
+		$newCrud->execution_state = 'UPDATE';
+		$newCrud->filter = $filter;
+		$newCrud->table_name = $this->table_name;
+		$newCrud->table_structure = $this->table_structure;
+		//print_r($this->table_structure);
 		$where = "";
 		foreach ($filter as $field => $value) {
 			$where .= " and " . $field . " = :" . $field;
@@ -48,14 +53,13 @@ class MyCrudPHP {
 			" where true " . $where;
 		
 		$q = $this->conn->prepare($sql);
-		$this->addExecutionLog(array(trim($sql), $filter));
+		$newCrud->addExecutionLog(array(trim($sql), $filter));
 		$q->execute($filter);
-		$r = $q->fetchAll();
-		$this->record = $r;
-		//return $r;
-		return $this;
+		$r = $q->fetchAll(PDO::FETCH_ASSOC);
+		$newCrud->record = $r;
+		return $newCrud;
 	}
-	
+
 	public function setValues($values) {
 		if (!is_array($this->values)) {
 			$this->values = array();
@@ -63,8 +67,13 @@ class MyCrudPHP {
 		$temp = array_merge($this->values, $values);
 		$this->values = $temp;
 	}
+	
+	public function getValues() {
+		return $this->values;
+	}
 
 	public function saveRecord() {
+		
 		if ( ($this->execution_state == 'UPDATE') && (count($this->values) > 0) && (count($this->filter) > 0) ) {
 			
 			// Filter
@@ -105,11 +114,14 @@ class MyCrudPHP {
 					$this->record[0][$field] = $value;
 				}
 				$this->values = array();
+				
 				return true;
 			} else {
 				return false;
 			}
+			
 		} elseif ( ($this->execution_state == 'INSERT') && (count($this->values) > 0) ) {
+			
 			$params_comma = $this->getFieldsParametersComma();
 			$fields_params = array_keys($this->values);
 			$fields_record = array_keys($this->record[0]);
@@ -153,7 +165,7 @@ class MyCrudPHP {
 	}
 	
 	public function getLoadedRecord() {
-		return $this->record;
+		return $this->record[0];
 	}
 
 	private function getFieldsParametersComma() {
@@ -171,16 +183,29 @@ class MyCrudPHP {
 	}
 	
 	public function newRecord() {
-		$this->table_structure = $this->getTableStructure($this->table_name);
+		$newCrud = new self($this->conn);
+		$newCrud->table_name = $this->table_name;
+		$newCrud->execution_state = 'INSERT';
+
 		foreach ($this->table_structure as $field) {
-			$this->record[0][$field['Field']] = null;
+			$newCrud->record[0][$field['Field']] = null;
 		}
-		$this->execution_state = 'INSERT';
-		return $this;
+
+		return $newCrud;
+	}
+
+	public function copyAsNew() {
+		$newCrud = new self($this->conn);
+		$newCrud->table_name = $this->table_name;
+		$newCrud->table_structure = $this->table_structure;
+		$newCrud->execution_state = 'INSERT';
+		$newCrud->setValues($this->getLoadedRecord());
+		$newCrud->record = $this->record;
+		
+		return $newCrud;
 	}
 
 	public function deleteRecord() {
-
 		// Filter
 		$where = "";
 		$counter = 1;
@@ -207,9 +232,7 @@ class MyCrudPHP {
 		} else {
 			return false;
 		}
-
 	}
-
 }
 
 /*
@@ -218,22 +241,27 @@ $PDO = new PDO( "mysql:host=127.0.0.1;port=3306;dbname=database", 'root', null);
 $crud = new MyCrudPHP($PDO);
 
 // Query:
-$person = $crud->table('persons')->getRecord(array('id' => 1));
+$person = $crud->table('people')->getRecord(array('id' => 1));
 print_r($person->getLoadedRecord());
 
 // Update:
-$person = $crud->table('persons')->getRecord(array('id' => 1));
+$person = $crud->table('people')->getRecord(array('id' => 1));
 $person->setValues(array('name' => 'Lawrence', 'age' => 27));
 $person->saveRecord();
 
 // Insert:
-$person = $crud->table('persons')->newRecord();
+$person = $crud->table('people')->newRecord();
 $person->setValues(array('name' => 'Lawrence', 'age' => 27));
 $person->saveRecord();
 
 // Delete:
-$person = $crud->table('persons')->getRecord(array('id' => 1));
+$person = $crud->table('people')->getRecord(array('id' => 1));
 $person->deleteRecord();
+
+// Duplicate to a mirrored table:
+$person = $crud->table('people')->getRecord(array('id' => 1));
+$person_copy = $person->copyAsNew()->table('people_2');
+$person_copy->save();
 */
 
 ?>

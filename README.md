@@ -17,28 +17,35 @@ $PDO = new PDO( "mysql:host=127.0.0.1;port=3306;dbname=database", 'root', null);
 $crud = new MyCrudPHP($PDO);
 ```
 
-### Query a record
+### Query record
 ```
-$person = $crud->table('persons')->getRecord(array('id' => 1));
+$person = $crud->table('people')->getRecord(array('id' => 1));
 print_r($person->getLoadedRecord());
 ```
 
-### Update a record
+### Update record
 ```
-$person = $crud->table('persons')->getRecord(array('id' => 1));
+$person = $crud->table('people')->getRecord(array('id' => 1));
 $person->setValues(array('name' => 'Lawrence', 'age' => 27));
 $person->saveRecord();
 ```
 
-### Insert a record
+### Insert record
 ```
-$person = $crud->table('persons')->newRecord();
+$person = $crud->table('people')->newRecord();
 $person->setValues(array('name' => 'Lawrence', 'age' => 27));
 $person->saveRecord();
 ```
 
-### Delete a record
+### Delete record
 ```
-$person = $crud->table('persons')->getRecord(array('id' => 1));
+$person = $crud->table('people')->getRecord(array('id' => 1));
 $person->deleteRecord();
+```
+
+### Duplicate record to a mirrored table:
+```
+$person = $crud->table('people')->getRecord(array('id' => 1));
+$person_copy = $person->copyAsNew()->table('people_2');
+$person_copy->save();
 ```
