@@ -140,6 +140,10 @@ class MyCrudPHP {
 		}
 	}
 	
+	public function saveRecord() {
+		return $this->save();
+	}
+	
 	private function addExecutionLog($data) {
 		$this->execution_log[] = $data;
 	}
@@ -174,6 +178,38 @@ class MyCrudPHP {
 		$this->execution_state = 'INSERT';
 		return $this;
 	}
+
+	public function deleteRecord() {
+
+		// Filter
+		$where = "";
+		$counter = 1;
+		$number_of_fields_filter = count($this->filter);
+		foreach ($this->filter as $field => $value) {
+			$where .= $field . " = :" . $field;
+			if ($counter < $number_of_fields_filter) {
+				$where .= " and ";
+			}
+			$counter++;
+		}
+
+		$sql = "
+			delete from " . $this->table_name .
+			" where " . $where;
+		
+		$this->addExecutionLog(array(trim($sql), $this->filter));
+		
+		$q = $this->conn->prepare($sql);
+		$bound = array_merge($this->filter);
+		
+		if ($q->execute($bound)) {
+			return true;
+		} else {
+			return false;
+		}
+		
+	}
+
 }
 
 /*
@@ -195,6 +231,9 @@ $person = $crud->table('persons')->newRecord();
 $person->setValues(array('name' => 'Lawrence', 'age' => 27));
 $person->save();
 
+// Delete:
+$person = $crud->table('persons')->getRecord(array('id' => 1));
+$person->deleteRecord();
 */
 
 ?>
