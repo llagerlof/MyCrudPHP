@@ -43,9 +43,18 @@ $person = $crud->table('people')->getRecord(array('id' => 1));
 $person->deleteRecord();
 ```
 
-### Duplicate record to a mirrored table:
+### Copy record to another table
 ```
 $person = $crud->table('people')->getRecord(array('id' => 1));
 $person_copy = $person->copyAsNew()->table('people_2');
+$person_copy->saveRecord();
+```
+
+### Copy record to another table, excluding and/or adding some fields
+```
+$person = $crud->table('people')->getRecord(array('id' => 1));
+$person_copy = $person->copyAsNew()->table('people_2');
+$person_copy->unsetValues(array('id'));
+$person_copy->setValues(array('age' => 20));
 $person_copy->saveRecord();
 ```

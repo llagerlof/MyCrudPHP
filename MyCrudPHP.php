@@ -22,19 +22,29 @@ class MyCrudPHP {
 		//$this->conn->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
 	}
 
-	// Return a table structure.
-	private function getTableStructure($table) {
-		$sql = "desc " . $table;
-		$ps = $this->conn->prepare($sql);
-		$this->addExecutionLog(array(trim($sql)));
-		$ps->execute();
-		$rs = $ps->fetchAll(PDO::FETCH_ASSOC);
-		return $rs;
+	// Return the table structure.
+	public function getTableStructure() {
+		return $this->table_structure;
 	}
 
+	// Set table name and structure
 	public function table($table_name) {
 		$this->table_name = $table_name;
-		$this->table_structure = $this->getTableStructure($table_name);
+
+		// Load table structure
+		$sql = "desc " . $table_name;
+		$ps = $this->conn->prepare($sql);
+		$this->addExecutionLog(array(trim($sql)));
+
+		$run = $ps->execute();
+		if (!$run) {
+			$errorInfo = $ps->errorInfo();
+			$errorMessage = $errorInfo[2];
+			throw new Exception(__FUNCTION__ . '(): ' . $errorMessage);
+		}
+
+		$rs = $ps->fetchAll(PDO::FETCH_ASSOC);
+		$this->table_structure = $rs;
 		return $this;
 	}
 
@@ -50,7 +60,7 @@ class MyCrudPHP {
 			$where .= " and " . $field . " = :" . $field;
 		}
 		$sql = "
-			select * from " . $this->table_name . 
+			select * from " . $this->table_name .
 			" where true " . $where;
 
 		$q = $this->conn->prepare($sql);
@@ -61,18 +71,17 @@ class MyCrudPHP {
 		if (!$run) {
 			$errorInfo = $q->errorInfo();
 			$errorMessage = $errorInfo[2];
-			throw new Exception($errorMessage);
+			throw new Exception(__FUNCTION__ . '(): ' . $errorMessage);
 		}
 
 		$r = $q->fetchAll(PDO::FETCH_ASSOC);
 
 		$record_count = count($r);
 		if ($record_count == 0) {
-			throw new Exception('Record not found.');
+			throw new Exception('getRecord():' . 'Record not found.');
 		} elseif ($record_count > 1) {
-			throw new Exception('More than 1 record found.');
+			throw new Exception(__FUNCTION__ . '(): ' . 'More than 1 record found.');
 		}
-
 		$newCrud->record = $r;
 		return $newCrud;
 	}
@@ -81,8 +90,21 @@ class MyCrudPHP {
 		if (!is_array($this->values)) {
 			$this->values = array();
 		}
-		$temp = array_merge($this->values, $values);
-		$this->values = $temp;
+		$merged = array_merge($this->values, $values);
+		$this->values = $merged;
+	}
+
+	public function unsetValues($values) {
+		if (!is_array($this->values)) {
+			$this->values = array();
+		}
+		if (!empty($this->values)) {
+			foreach ($values as $field) {
+				unset($this->values[$field]);
+			}
+		} else {
+			throw new Exception(__FUNCTION__ . '(): ' . 'Field values have not been set.');
+		}
 	}
 
 	public function getValues() {
@@ -90,21 +112,23 @@ class MyCrudPHP {
 	}
 
 	public function saveRecord() {
-		
 		if (($this->execution_state !== 'UPDATE') && ($this->execution_state !== 'INSERT')) {
-			throw new Exception('Not in UPDATE or INSERT state.');
-		}
-
-		if (empty($this->values)) {
-			throw new Exception('Field values have not been set.');
+			throw new Exception(__FUNCTION__ . '(): ' . 'Tried to save without previous call to getRecord() or newRecord().');
 		}
 
 		if (($this->execution_state == 'UPDATE') && (empty($this->filter))) {
-			throw new Exception("Can't update without filter.");
+			throw new Exception(__FUNCTION__ . '(): ' . "Can't update without filter.");
+		}
+
+		if (empty($this->table_name)) {
+			throw new Exception(__FUNCTION__ . '(): ' . 'Table name have not been set.');
+		}
+
+		if (empty($this->values)) {
+			throw new Exception(__FUNCTION__ . '(): ' . 'Field values have not been set.');
 		}
 
 		if ($this->execution_state == 'UPDATE') {
-
 			// Filter
 			$where = "";
 			$counter = 1;
@@ -143,7 +167,7 @@ class MyCrudPHP {
 			if (!$run) {
 				$errorInfo = $q->errorInfo();
 				$errorMessage = $errorInfo[2];
-				throw new Exception($errorMessage);
+				throw new Exception(__FUNCTION__ . '(): ' . $errorMessage);
 			} else {
 
 				foreach ($this->values as $field => $value) {
@@ -170,7 +194,7 @@ class MyCrudPHP {
 			if (!$run) {
 				$errorInfo = $q->errorInfo();
 				$errorMessage = $errorInfo[2];
-				throw new Exception($errorMessage);
+				throw new Exception(__FUNCTION__ . '(): ' . $errorMessage);
 			} else {
 				$this->values = array();
 				return true;
@@ -247,6 +271,11 @@ class MyCrudPHP {
 	}
 
 	public function deleteRecord() {
+
+		if (empty($this->filter)) {
+			throw new Exception(__FUNCTION__ . '(): ' . "Can't delete without filter.");
+		}
+
 		// Filter
 		$where = "";
 		$counter = 1;
@@ -273,7 +302,7 @@ class MyCrudPHP {
 		if (!$run) {
 			$errorInfo = $q->errorInfo();
 			$errorMessage = $errorInfo[2];
-			throw new Exception($errorMessage);
+			throw new Exception(__FUNCTION__ . '(): ' . $errorMessage);
 		} else {
 			return true;
 		}
@@ -303,9 +332,16 @@ $person->saveRecord();
 $person = $crud->table('people')->getRecord(array('id' => 1));
 $person->deleteRecord();
 
-// Duplicate to a mirrored table:
+// Copy record to another table:
 $person = $crud->table('people')->getRecord(array('id' => 1));
 $person_copy = $person->copyAsNew()->table('people_2');
+$person_copy->saveRecord();
+
+// Copy record to another table, excluding and/or adding some fields:
+$person = $crud->table('people')->getRecord(array('id' => 1));
+$person_copy = $person->copyAsNew()->table('people_2');
+$person_copy->unsetValues(array('id'));
+$person_copy->setValues(array('age' => 20));
 $person_copy->saveRecord();
 */
 
