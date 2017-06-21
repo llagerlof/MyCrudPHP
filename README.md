@@ -47,5 +47,5 @@ $person->deleteRecord();
 ```
 $person = $crud->table('people')->getRecord(array('id' => 1));
 $person_copy = $person->copyAsNew()->table('people_2');
-$person_copy->save();
+$person_copy->saveRecord();
 ```
