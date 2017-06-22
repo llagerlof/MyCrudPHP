@@ -78,7 +78,7 @@ class MyCrudPHP {
 
 		$record_count = count($r);
 		if ($record_count == 0) {
-			throw new Exception('getRecord():' . 'Record not found.');
+			throw new Exception(__FUNCTION__ . '():' . 'Record not found.');
 		} elseif ($record_count > 1) {
 			throw new Exception(__FUNCTION__ . '(): ' . 'More than 1 record found.');
 		}
@@ -169,7 +169,6 @@ class MyCrudPHP {
 				$errorMessage = $errorInfo[2];
 				throw new Exception(__FUNCTION__ . '(): ' . $errorMessage);
 			} else {
-
 				foreach ($this->values as $field => $value) {
 					$this->record[0][$field] = $value;
 				}
@@ -253,7 +252,6 @@ class MyCrudPHP {
 		$newCrud = new self($this->conn);
 		$newCrud->table_name = $this->table_name;
 		$newCrud->execution_state = 'INSERT';
-
 		foreach ($this->table_structure as $field) {
 			$newCrud->record[0][$field['Field']] = null;
 		}
@@ -271,7 +269,6 @@ class MyCrudPHP {
 	}
 
 	public function deleteRecord() {
-
 		if (empty($this->filter)) {
 			throw new Exception(__FUNCTION__ . '(): ' . "Can't delete without filter.");
 		}
